@@ -1,0 +1,50 @@
+"COP Refrigeration Cycles"
+ 
+"making function of input variables"
+ 
+Function cop(V_dot_lpm, T_in, T_out, W_in, P_atm, P_out, mode$)
+ 
+P_kpa = P_atm * convert(atm, kPa) "in atm, converted to kPa"
+P_out_kpa = P_out * convert(atm, kPa) "in atm, converted to kPa"
+ 
+V_dot = V_dot_lpm * convert(L/min,m^3/s) "in litres/minute, converted to cubic metres/second"
+ 
+"Case Switch for water or air"
+Case mode$
+	'wateR'::       rho = density(Water, T = average(T_in, T_out), P = P_kpa)
+	                m_dot = rho * V_dot
+                    cP = cp(Water, T = average(T_in, T_out), P = P_kpa)
+                    Q_dot = m_dot * cP * (T_in - T_out) "in kW"
+	'aiR'::         rho = density(R134a, T = average(T_in, T_out), P = P_kpa)
+	                m_dot = rho * V_dot
+	                h_1 = enthalpy(R134a, T = T_in , P = P_kpa)
+                    h_2 = enthalpy(R134a, T = T_out , P = P_out_kpa)
+                    Q_dot = m_dot * (h_1 - h_2) "in kW, convert to Watt later"
+	"default to water"
+	ELSE::          rho = density(Water, T = average(T_in, T_out) , P = P_kpa)
+	                m_dot = rho * V_dot
+                    cP = cp(Water, T = average(T_in, T_out), P = P_kpa)
+                    Q_dot = m_dot * cP * (T_out-T_in) "in kW, negative"
+Endcase
+	cop = Q_dot*convert(kW, W) / W_in
+End
+ 
+"initialising using example values"
+mode$ = 'water' "water for water-water, air for air-air"
+ 
+P_atm = 1 [atm] "in atm approximating 1 bar = 1 atm, converted to kPa in function"
+P_out_atm = 1 [atm] "for outlet air pressure in air-air system, used for calculating enthalpies"
+V_dot_lpm = 1.75 [L/min] "in litres/minute, converted to cubic metres/second in function"
+ 
+W_in = -887 [W] "Power input of compressor, negative, in Watt"
+T_in = 23 [C] "ST5 evaporator, in C"
+T_out = 15 [C] "ST7 evaporator, in C"
+ 
+"Call the function using various parameters and calculate COPs for both cases"
+"COP_example = cop(V_dot_lpm, T_in, T_out, W_in, P_atm, P_out, mode$)"
+ 
+COP_water = cop(1.05 [L/min], 21 [C], 14 [C], -822 [W], P_atm, P_out_atm, 'water')
+COP_air = cop( (30/60) [L/min], 17 [C], 6 [C], -886 [W], P_atm, P_out_atm, 'air')
+ 
+COP_water_2 = cop(1.75 [L/min], 23 [C], 15 [C], -887 [W], P_atm, P_out_atm, mode$)
+COP_air_2 = cop( (22/60) [L/min], 17 [C], 6 [C], -879 [W], 4.2 [atm], 3.2 [atm], 'air' )

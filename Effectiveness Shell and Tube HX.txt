@@ -1,0 +1,107 @@
+"Effectiveness of Shell and Tube Heat Exchanger"
+ 
+"Function for e of Max Heat Transfer Method"
+Function epsilon_heat(T_c_in, T_c_out, V_dot_c_lpm, T_h_in, T_h_out, V_dot_h_lpm, P, TypeHX$, mode$)
+ 
+	"convert lpm to m3/s"
+	V_dot_c = V_dot_c_lpm * convert(L/min, m^3/s)
+	V_dot_h = V_dot_h_lpm * convert(L/min, m^3/s)
+ 
+ 	"cold water"
+	rho_c = density(Water, T = average(T_c_in, T_c_out), P = P)
+	m_dot_c = rho_c * V_dot_c
+	Cp_c = cp(Water, T = average(T_c_in, T_c_out), P = P)
+ 
+	"hot water"
+	rho_h = density(Water, T = average(T_h_in, T_h_out), P = P)
+	m_dot_h = rho_h * V_dot_h
+	Cp_h = cp(Water, T = average(T_h_in, T_h_out), P = P)
+ 
+	"Heat Transfers"
+	Q_dot_h = m_dot_h * Cp_h * (T_h_in - T_h_out)
+	Q_dot_c = m_dot_c * Cp_c * (T_c_out - T_c_in)
+ 
+	C_dot_h = m_dot_h * Cp_h
+	C_dot_c = m_dot_c * Cp_c
+	C_dot_min = min(C_dot_h, C_dot_c)
+ 
+	Q_dot_max = C_dot_min * (T_h_in - T_c_in)
+ 
+	"Effectiveness by Max Heat Transfer Method"
+	epsilon_heat = Q_dot_c / Q_dot_max
+ 
+End
+ 
+ 
+"Function for e of Log Mean Temperature Difference Method"
+ 
+Function epsilon_lmtd(T_c_in, T_c_out, V_dot_c_lpm, T_h_in, T_h_out, V_dot_h_lpm, P, A, TypeHX$, mode$)
+ 
+ 	"Starting is same as Max Heat Transfer Method"
+ 
+ 	"convert lpm to m3/s"
+	V_dot_c = V_dot_c_lpm * convert(L/min, m^3/s)
+	V_dot_h = V_dot_h_lpm * convert(L/min, m^3/s)
+ 
+ 	"cold water"
+	rho_c = density(Water, T = average(T_c_in, T_c_out), P = P)
+	m_dot_c = rho_c * V_dot_c
+	Cp_c = cp(Water, T = average(T_c_in, T_c_out), P = P)
+ 
+	"hot water"
+	rho_h = density(Water, T = average(T_h_in, T_h_out), P = P)
+	m_dot_h = rho_h * V_dot_h
+	Cp_h = cp(Water, T = average(T_h_in, T_h_out), P = P)
+ 
+	"Heat Transfers"
+	Q_dot_h = m_dot_h * Cp_h * (T_h_in - T_h_out)
+	Q_dot_c = m_dot_c * Cp_c * (T_c_out - T_c_in)
+ 
+	C_dot_h = m_dot_h * Cp_h
+	C_dot_c = m_dot_c * Cp_c
+	C_dot_min = min(C_dot_h, C_dot_c) 
+ 
+"Case Switch for parallel or counter flow"
+Case mode$
+	'parallel'::    Delta_T_1 = T_h_in - T_c_in
+	                Delta_T_2 = T_h_out - T_c_out
+ 
+	'counter'::     Delta_T_1 = T_h_in - T_c_out
+	                Delta_T_2 = T_h_out - T_c_in
+ 
+	"default to parallel"
+	ELSE::          Delta_T_1 = T_h_in - T_c_in
+	                Delta_T_2 = T_h_out - T_c_out
+Endcase
+ 
+	LMDT = (Delta_T_1 - Delta_T_2) / (ln(Delta_T_1 / Delta_T_2))
+	U = Q_dot_c / (LMDT * A)
+	NtU = (U * A) / C_dot_min
+ 
+ 	epsilon_lmtd = hx(TypeHX$, NtU, C_dot_h, C_dot_c, 'epsilon')
+End
+ 
+ 
+"input variables, with default initialisation"
+P = 1 * convert(atm, kPa)
+TypeHX$ = 'shell&tube_1' "shell and tube, 1 tube"
+mode$ = 'parallel' " parallel or counter flow "
+ 
+T_c_in = 28 [C]
+T_c_out = 35 [C]
+V_dot_c_lpm = 1.2 [L/min]
+T_h_in = 41 [C]
+T_h_out = 36 [C]
+V_dot_h_lpm = 1.4 [L/min]
+ 
+A = 0.3297 [m^2]
+ 
+"epsilon_heat_example = epsilon_heat(T_c_in, T_c_out, V_dot_c_lpm, T_h_in, T_h_out, V_dot_h_lpm, P, TypeHX$, mode$)"
+ 
+"epsilon_lmtd_example = epsilon_lmtd(T_c_in, T_c_out, V_dot_c_lpm, T_h_in, T_h_out, V_dot_h_lpm, P, A, TypeHX$, mode$)"
+ 
+epsilon_heat_parallel = epsilon_heat( 28 [C], 35 [C], 1.2 [L/min], 41 [C], 36 [C], 1.4 [L/min], P, TypeHX$, 'parallel')
+epsilon_heat_counter = epsilon_heat( 26 [C], 33 [C], 1.2 [L/min], 39 [C], 33 [C], 1.4 [L/min], P, TypeHX$, 'counter')
+ 
+epsilon_lmtd_parallel = epsilon_lmtd(28 [C], 35 [C], 1.2 [L/min], 41 [C], 36 [C], 1.4 [L/min], P, A, TypeHX$, 'parallel')
+epsilon_lmtd_counter = epsilon_lmtd(26 [C], 33 [C], 1.2 [L/min], 39 [C], 33 [C], 1.4 [L/min], P, A, TypeHX$, 'counter')
